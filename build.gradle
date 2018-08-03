@@ -1,30 +1,33 @@
 plugins {
     id 'cpp'
     id 'visual-studio'
-    id 'edu.wpi.first.NativeUtils' version '1.6.7'
+    id 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin' version '2.1'
+    id 'edu.wpi.first.NativeUtils' version '1.7.0'
+    id 'de.undercouch.download' version '3.4.3'
 }
-
-repositories {
-    mavenCentral()
-}
-
-ext.licenseFile = file("$rootDir/LICENSE.txt")
 
 apply from: 'config.gradle'
 
 def outputsFolder = file("$buildDir/allOutputs")
 
-task copyAllOutputs(type: Copy) {
-    destinationDir outputsFolder
+def googleTestRelease = 'release-1.8.0.zip'
+def googleTestFolderName = 'googletest-release-1.8.0'
+
+task getGoogleTest(type: Download) {
+    src 'https://github.com/google/googletest/archive/' + googleTestRelease
+    dest new File(outputsFolder, googleTestRelease)
+    overwrite false
 }
 
-build.dependsOn copyAllOutputs
-
-ext.addTaskToCopyAllOutputs = { task ->
-    copyAllOutputs.dependsOn task
-    copyAllOutputs.inputs.file task.archivePath
-    copyAllOutputs.from task.archivePath
+task unzipGoogleTest(dependsOn: getGoogleTest, type: Copy) {
+    from zipTree(getGoogleTest.dest)
+    into buildDir
 }
+task copyGoogleTest(dependsOn: unzipGoogleTest, type: Copy) {
+    from "${buildDir}/" + googleTestFolderName + "/"
+    into "${projectDir}/googletest"
+}
+build.dependsOn unzipGoogleTest
 
 model {
     components {
@@ -32,12 +35,12 @@ model {
             sources {
                 cpp {
                     source {
-                        srcDirs 'googletest/googletest/src', 'googletest/googlemock/src'
-                        exclude '**/*-all.cc', '**/*_main.cc'
+                        srcDirs 'googletest/googletest/src'
+                        exclude '**/*-all.cc', '**/*_main.cc', '**/*.h'
                     }
                     exportedHeaders {
-                        srcDirs 'googletest/googletest/include', 'googletest/googlemock/include',
-                                'googletest/googletest', 'googletest/googlemock'
+                        srcDirs 'googletest/googletest/include', 'googletest/googletest'
+                        include '**/*.h'
                     }
                 }
             }
@@ -58,5 +61,5 @@ model {
 apply from: 'publish.gradle'
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.7'
+    gradleVersion = '4.9'
 }

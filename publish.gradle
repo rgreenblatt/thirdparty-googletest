@@ -1,30 +1,29 @@
 apply plugin: 'maven-publish'
 
-publishing {
-    repositories {
-        maven {
-            url "${System.getProperty('user.home')}/releases/maven/development"
-        }
-        maven {
-            url "${System.getProperty('user.home')}/releases/maven/release"
-        }
+// Ensure that the WPILibVersioningPlugin is setup by setting the release type, if releaseType wasn't
+// already specified on the command line
+if (!hasProperty('releaseType')) {
+    WPILibVersion {
+        releaseType = 'OFFICIAL'
     }
 }
 
-def releaseNumber = 1
+ext.licenseFile = files("$rootDir/LICENSE.txt")
 
-def pubVersion = "1.8.0-$releaseNumber-4e4df22"
+def pubVersion = '1.8.0'
+//if(ext.hasProperty("gtestVersion")){
+//    pubVersion = ext.gtestVersion
+//}
+//else{
+//    pubVersion = WPILibVersion.version
+//}
 
-def baseArtifactId = 'googletest'
-def artifactGroupId = 'edu.wpi.first.thirdparty.frc2018'
-def zipBaseName = '_GROUP_edu_wpi_first_thirdparty_frc2018_ID_googletest_CLS'
-
-def outputsFolder = file("$project.buildDir/outputs")
+def outputsFolder = file("$buildDir/allOutputs")
 
 def versionFile = file("$outputsFolder/version.txt")
 
 task outputVersions() {
-    description = 'Prints the versions of this to a file for use by the downstream packaging project'
+    description = 'Prints the versions of wpilib to a file for use by the downstream packaging project'
     group = 'Build'
     outputs.files(versionFile)
 
@@ -38,32 +37,26 @@ task outputVersions() {
     }
 }
 
+task libraryBuild() {}
+
 build.dependsOn outputVersions
-copyAllOutputs.dependsOn outputVersions
-copyAllOutputs.inputs.file versionFile
-copyAllOutputs.from versionFile
 
-task cppSourcesZip(type: Zip) {
-    destinationDir = outputsFolder
-    baseName = zipBaseName
-    classifier = "sources"
-
-    from(licenseFile) {
-        into '/'
-    }
-
-    from('googletest/googletest/src') {
-        exclude '**/*-all.cc'
-        exclude '**/*_main.cc'
-        into '/'
-    }
-
-    from('googletest/googlemock/src') {
-        exclude '**/*-all.cc'
-        exclude '**/*_main.cc'
-        into '/'
-    }
+task copyAllOutputs(type: Copy) {
+    destinationDir outputsFolder
 }
+
+build.dependsOn copyAllOutputs
+copyAllOutputs.dependsOn outputVersions
+
+ext.addTaskToCopyAllOutputs = { task ->
+    copyAllOutputs.dependsOn task
+    copyAllOutputs.inputs.file task.archivePath
+    copyAllOutputs.from task.archivePath
+}
+
+def baseArtifactId = 'gtest'
+def artifactGroupId = 'com.ctre.phoenix'
+def zipBaseName = '_GROUP_com_ctre_phoenix_ID_gtest_CLS'
 
 task cppHeadersZip(type: Zip) {
     destinationDir = outputsFolder
@@ -77,36 +70,28 @@ task cppHeadersZip(type: Zip) {
     from('googletest/googletest/include') {
         into '/'
     }
-
-    from('googletest/googlemock/include') {
-        into '/'
-    }
 }
 
 build.dependsOn cppHeadersZip
-build.dependsOn cppSourcesZip
-
 addTaskToCopyAllOutputs(cppHeadersZip)
-addTaskToCopyAllOutputs(cppSourcesZip)
 
 model {
     publishing {
-        def GtTaskList = createComponentZipTasks($.components, 'googletest', zipBaseName, Zip, project, includeStandardZipFormat)
+        def gtestTaskList = createComponentZipTasks($.components, 'googletest', zipBaseName, Zip, project, includeStandardZipFormat)
         def allTask
         if (!project.hasProperty('jenkinsBuild')) {
-            allTask = createAllCombined(GtTaskList, 'googletest', zipBaseName, Zip, project)
+            allTask = createAllCombined(gtestTaskList, 'googletest', zipBaseName, Zip, project)
         }
 
         publications {
             cpp(MavenPublication) {
-                GtTaskList.each {
+                gtestTaskList.each {
                     artifact it
                 }
                 if (!project.hasProperty('jenkinsBuild')) {
                     artifact allTask
                 }
                 artifact cppHeadersZip
-                artifact cppSourcesZip
 
                 artifactId = baseArtifactId
                 groupId artifactGroupId
