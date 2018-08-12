@@ -4,14 +4,17 @@ import org.gradle.internal.os.OperatingSystem
 def windowsCompilerArgs = ['/EHsc', '/DNOMINMAX', '/Zi', '/FS', '/Zc:inline', '/MT']
 def windowsCCompilerArgs = ['/Zi', '/FS', '/Zc:inline', '/MT']
 def windowsReleaseCompilerArgs = ['/O2']
-def windowsLinkerArgs = ['/DEBUG:FULL']
-def windowsReleaseLinkerArgs = ['/OPT:REF', '/OPT:ICF']
+def windowsLinkerArgs = ['/DEBUG:FULL', '/FORCE:UNRESOLVED']
+def windowsReleaseLinkerArgs = ['/OPT:REF', '/OPT:ICF', '/FORCE:UNRESOLVED']
 
-def linuxCompilerArgs = ['-std=c++14', '-Wformat=2', '-Wall', '-Wextra', '-Werror', '-pedantic', '-Wno-psabi', '-Wno-error=deprecated-declarations', '-fPIC', '-rdynamic', '-pthread']
-def linuxCCompilerArgs = ['-Wformat=2', '-Wall', '-Wextra', '-Werror', '-pedantic', '-Wno-psabi', '-Wno-unused-parameter', '-fPIC', '-rdynamic', '-pthread']
+def linuxCompilerArgs = ['-std=c++14', '-Wformat=2', '-Wall', '-Wextra', '-Werror', '-pedantic', '-Wno-psabi', '-g',
+                         '-Wno-unused-parameter', '-Wno-error=deprecated-declarations', '-fPIC', '-rdynamic',
+                         '-pthread']
+def linuxCCompilerArgs = ['-Wformat=2', '-Wall', '-Wextra', '-Werror', '-pedantic', '-Wno-psabi', '-g',
+                          '-Wno-unused-parameter', '-fPIC', '-rdynamic', '-pthread']
 def linuxLinkerArgs = ['-rdynamic', '-pthread', '-ldl']
 def linuxReleaseCompilerArgs = ['-Og']
-def linuxDebugCompilerArgs = ['-O0', '-g']
+def linuxDebugCompilerArgs = ['-O0']
 def linux32BitArg = '-m32'
 
 def macCompilerArgs = ['-std=c++14', '-Wall', '-Wextra', '-Werror', '-pedantic-errors', '-fPIC', '-g',
@@ -95,30 +98,11 @@ def mac32PlatformDetect = {
     }
 }
 
-if (!project.hasProperty('skipAthena')) {
+if (!project.hasProperty('skipArmhf')) {
     model {
         buildConfigs {
-            roboRio(CrossBuildConfig) {
-                architecture = 'athena'
-                operatingSystem = 'linux'
-                toolChainPrefix = 'arm-frc-linux-gnueabi-'
-                compilerArgs = linuxCompilerArgs
-                CCompilerArgs = linuxCCompilerArgs
-                linkerArgs = linuxLinkerArgs
-                debugCompilerArgs = linuxDebugCompilerArgs
-                releaseCompilerArgs = linuxReleaseCompilerArgs
-                releaseStripBinaries = true
-                compilerFamily = 'Gcc'
-            }
-        }
-    }
-}
-
-if (!project.hasProperty('skipRaspberry')) {
-    model {
-        buildConfigs {
-            raspberry(CrossBuildConfig) {
-                architecture = 'raspberry'
+            armhf(CrossBuildConfig) {
+                architecture = 'armhf'
                 operatingSystem = 'linux'
                 toolChainPrefix = 'arm-linux-gnueabihf-'
                 compilerArgs = linuxCompilerArgs
@@ -133,34 +117,13 @@ if (!project.hasProperty('skipRaspberry')) {
     }
 }
 
-if (!project.hasProperty('onlyAthena')) {
+if (!project.hasProperty('skipAarch64')) {
     model {
         buildConfigs {
-            winX86(BuildConfig) {
-                architecture = 'x86'
-                operatingSystem = 'windows'
-                compilerArgs = windowsCompilerArgs
-                CCompilerArgs = windowsCCompilerArgs
-                linkerArgs = windowsLinkerArgs
-                releaseCompilerArgs = windowsReleaseCompilerArgs
-                releaseLinkerArgs = windowsReleaseLinkerArgs
-                compilerFamily = 'VisualCpp'
-                detectPlatform = windows32PlatformDetect
-            }
-            winX64(BuildConfig) {
-                architecture = 'x86-64'
-                operatingSystem = 'windows'
-                compilerArgs = windowsCompilerArgs
-                CCompilerArgs = windowsCCompilerArgs
-                linkerArgs = windowsLinkerArgs
-                releaseCompilerArgs = windowsReleaseCompilerArgs
-                releaseLinkerArgs = windowsReleaseLinkerArgs
-                compilerFamily = 'VisualCpp'
-                detectPlatform = windows64PlatformDetect
-            }
-            linuxX64(BuildConfig) {
-                architecture = 'x86-64'
+            aarch64(CrossBuildConfig) {
+                architecture = 'aarch64'
                 operatingSystem = 'linux'
+                toolChainPrefix = 'aarch64-linux-gnu-'
                 compilerArgs = linuxCompilerArgs
                 CCompilerArgs = linuxCCompilerArgs
                 linkerArgs = linuxLinkerArgs
@@ -168,23 +131,62 @@ if (!project.hasProperty('onlyAthena')) {
                 releaseCompilerArgs = linuxReleaseCompilerArgs
                 releaseStripBinaries = true
                 compilerFamily = 'Gcc'
-                detectPlatform = linux64IntelPlatformDetect
-            }
-            macX64(BuildConfig) {
-                architecture = 'x86-64'
-                operatingSystem = 'osx'
-                compilerArgs = macCompilerArgs
-                CCompilerArgs = macCCompilerArgs
-                debugCompilerArgs = macDebugCompilerArgs
-                releaseCompilerArgs = macReleaseCompilerArgs
-                objCppCompilerArgs = macObjCLinkerArgs
-                linkerArgs = macLinkerArgs
-                compilerFamily = 'Clang'
-                detectPlatform = mac64PlatformDetect
             }
         }
     }
 }
+
+model {
+    buildConfigs {
+        winX86(BuildConfig) {
+            architecture = 'x86'
+            operatingSystem = 'windows'
+            compilerArgs = windowsCompilerArgs
+            CCompilerArgs = windowsCCompilerArgs
+            linkerArgs = windowsLinkerArgs
+            releaseCompilerArgs = windowsReleaseCompilerArgs
+            releaseLinkerArgs = windowsReleaseLinkerArgs
+            compilerFamily = 'VisualCpp'
+            detectPlatform = windows32PlatformDetect
+        }
+        winX64(BuildConfig) {
+            architecture = 'x86-64'
+            operatingSystem = 'windows'
+            compilerArgs = windowsCompilerArgs
+            CCompilerArgs = windowsCCompilerArgs
+            linkerArgs = windowsLinkerArgs
+            releaseCompilerArgs = windowsReleaseCompilerArgs
+            releaseLinkerArgs = windowsReleaseLinkerArgs
+            compilerFamily = 'VisualCpp'
+            detectPlatform = windows64PlatformDetect
+        }
+        linuxX64(BuildConfig) {
+            architecture = 'x86-64'
+            operatingSystem = 'linux'
+            compilerArgs = linuxCompilerArgs
+            CCompilerArgs = linuxCCompilerArgs
+            linkerArgs = linuxLinkerArgs
+            debugCompilerArgs = linuxDebugCompilerArgs
+            releaseCompilerArgs = linuxReleaseCompilerArgs
+            releaseStripBinaries = true
+            compilerFamily = 'Gcc'
+            detectPlatform = linux64IntelPlatformDetect
+        }
+        macX64(BuildConfig) {
+            architecture = 'x86-64'
+            operatingSystem = 'osx'
+            compilerArgs = macCompilerArgs
+            CCompilerArgs = macCCompilerArgs
+            debugCompilerArgs = macDebugCompilerArgs
+            releaseCompilerArgs = macReleaseCompilerArgs
+            objCppCompilerArgs = macObjCLinkerArgs
+            linkerArgs = macLinkerArgs
+            compilerFamily = 'Clang'
+            detectPlatform = mac64PlatformDetect
+        }
+    }
+}
+
 
 if (project.hasProperty('linuxCross')) {
     model {

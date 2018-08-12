@@ -8,14 +8,14 @@ plugins {
 
 apply from: 'config.gradle'
 
-def outputsFolder = file("$buildDir/allOutputs")
+def outputsFolderZip = file("$buildDir/zipOutputs")
 
 def googleTestRelease = 'release-1.8.0.zip'
 def googleTestFolderName = 'googletest-release-1.8.0'
 
 task getGoogleTest(type: Download) {
     src 'https://github.com/google/googletest/archive/' + googleTestRelease
-    dest new File(outputsFolder, googleTestRelease)
+    dest new File(outputsFolderZip, googleTestRelease)
     overwrite false
 }
 
@@ -27,7 +27,8 @@ task copyGoogleTest(dependsOn: unzipGoogleTest, type: Copy) {
     from "${buildDir}/" + googleTestFolderName + "/"
     into "${projectDir}/googletest"
 }
-build.dependsOn unzipGoogleTest
+copyGoogleTest.dependsOn unzipGoogleTest
+build.dependsOn copyGoogleTest
 
 model {
     components {
